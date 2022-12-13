@@ -6,7 +6,7 @@ use std::io::{BufRead, BufReader};
 fn main() {
     println!(
         "{}",
-        sum_of_small_directory_sizes(DirectorySizes::new(&read_file_system(
+        deletable_directory_size(DirectorySizes::new(&read_file_system(
             "src/bin/day_07_input.txt"
         )))
     );
@@ -119,6 +119,7 @@ fn read_file_system(path: &str) -> DirectoryNode {
     cwd.root().node
 }
 
+#[derive(Clone)]
 struct DirectorySizesState<'a> {
     node: &'a DirectoryNode,
     index: usize,
@@ -135,6 +136,7 @@ impl<'a> DirectorySizesState<'a> {
     }
 }
 
+#[derive(Clone)]
 struct DirectorySizes<'a> {
     queue: Vec<DirectorySizesState<'a>>,
 }
@@ -174,8 +176,18 @@ impl<'a> Iterator for DirectorySizes<'a> {
     }
 }
 
-fn sum_of_small_directory_sizes(all_directory_sizes: impl Iterator<Item = usize>) -> usize {
-    all_directory_sizes.filter(|&x| x < 100_000).sum()
+fn deletable_directory_size(all_directory_sizes: DirectorySizes) -> usize {
+    const TOTAL_DISK_SPACE: usize = 70_000_000;
+    const REQUIRED_DISK_SPACE: usize = 30_000_000;
+
+    let used_disk_space = all_directory_sizes.clone().last().unwrap();
+    let available_disk_space = TOTAL_DISK_SPACE - used_disk_space;
+    let missing_disk_space = REQUIRED_DISK_SPACE - available_disk_space;
+
+    all_directory_sizes
+        .filter(|&x| x >= missing_disk_space)
+        .min()
+        .unwrap()
 }
 
 #[cfg(test)]
@@ -221,10 +233,10 @@ mod tests {
     }
 
     #[test]
-    fn sum_of_small_directory_sizes_works() {
+    fn deletable_directory_size_works() {
         assert_eq!(
-            sum_of_small_directory_sizes(DirectorySizes::new(&create_test_file_system())),
-            95437
+            deletable_directory_size(DirectorySizes::new(&create_test_file_system())),
+            24933642
         );
     }
 
